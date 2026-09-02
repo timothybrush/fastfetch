@@ -65,7 +65,7 @@ bool ffGenerateProcessesJsonResult([[maybe_unused]] FFProcessesOptions* options,
 void ffInitProcessesOptions(FFProcessesOptions* options) {
     ffOptionInitModuleArg(&options->moduleArgs, "");
 
-    options->countKprocs = false;
+    options->countKprocs = true;
 }
 
 void ffDestroyProcessesOptions(FFProcessesOptions* options) {
