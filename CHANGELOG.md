@@ -39,6 +39,15 @@ Features:
 * Added CPU name and frequency detection support on SPARC. (CPU, Linux)
 * Added package detection support for CRUX. (Packages, Linux)
     * Exposed in custom format as `{crux}`.
+* Improved Android ROM detection (DE, Android)
+    * Added support for HarmonyOS, HarmonyOS NEXT, Flyme, JOYUI, SmartisanOS, realme UI, HydrogenOS, ZUI, ZUXOS, MyOS, NebulaAIOS, ObricUI, MiFavor, LineageOS, PixelExperience, EUI and 360 UI.
+    * Added support for MagicUI 3.x, which stores a bare version number instead of a `MagicUI_x.y.z` string.
+    * Added Samsung OneUI support (#2541)
+    * This is mostly untested due to lack of available devices running these ROMs. Please report any issues you encounter.
+* Improved Camera detection on Android (Camera, Android)
+    * The camera list is now read from the camera2 NDK instead of `termux-api CameraInfo`, so the Termux:API app is no longer required and no subprocess is spawned.
+* Improved Display detection on Android when fastfetch runs as an app rather than from `adb shell`, where `dumpsys display` is not permitted. (Display, Android)
+    * The displays are now read through the shell command interface of the display service, which needs no permission.
 * Improved COSMIC detection (DE / WM, Linux)
     * The version is now read from the `COSMIC_VERSION` environment variable when it is set.
 * Improved accuracy and performance of process name detection in the Top module. (Top, macOS)
