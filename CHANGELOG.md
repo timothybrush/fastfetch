@@ -8,6 +8,8 @@ Changes:
     * `--logo-cache true` (the default) reuses a cached rendering when it is valid, and writes it back on a cache miss; `false` ignores the image logo cache completely, reading nothing from it and writing nothing to it; `regen` does what `--logo-recache true` used to do. `logo.cache` accepts a boolean, or the string `"regen"`.
 * The `waitTime` option of `DiskIO` and `NetIO` now defaults to `250` ms instead of `500`. (DiskIO / NetIO)
     * The byte counters are maintained by the kernel as I/O happens, so a shorter sampling window still yields an accurate rate, and both modules now finish about 250 ms sooner. The two modules wait concurrently, so enabling both does not cost twice the wait time.
+* The `waitTime` option of `Top` now defaults to `250` ms instead of `500`. (Top)
+    * The operating system accounts process CPU time in fixed steps, so a window longer than roughly 150 ms does not visibly improve the reported percentages. The module now finishes about 250 ms sooner.
 
 Features:
 * Improved image logo support
@@ -57,7 +59,9 @@ Features:
     * The version is now read from the `COSMIC_VERSION` environment variable when it is set.
 * Improved accuracy and performance of process name detection in the Top module. (Top, macOS)
 * Improved Packages detection on Windows (Packages, Windows)
-    * `winget list` is now invoked with `--source winget`, so only packages installed by winget itself are counted, and the slow msstore HTTP round trips are skipped.
+    * `winget` is now detected by default, instead of requiring a build-time opt-in, and the source agreements are accepted non-interactively on a machine that has never accepted them. Opt out by setting `packages.disabled` to `["winget"]`, or by configuring with `cmake -DPACKAGES_DISABLE_WINGET=ON`.
+    * The count reports the packages the `winget` source knows about, which is not limited to the packages `winget` itself installed. Microsoft Store apps are no longer counted.
+    * `winget list` takes about 1.5 seconds, so its result is cached. The cache is refreshed when a program is installed or removed, not on a timer, so only the first run after such a change is slow.
 * Improved Wallpaper detection on macOS Sonoma and later (#2559, Wallpaper, macOS)
     * The image path is now also extracted from the `Configuration` field of the wallpaper plist, and the `NSWorkspace` fallback is used only as a last resort.
 * Removed the `kvm` dependency on OpenBSD by using `sysctl` directly. (General, OpenBSD)

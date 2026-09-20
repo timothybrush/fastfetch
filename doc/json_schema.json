@@ -3812,7 +3812,7 @@
                                                 "type": "null"
                                             }
                                         ],
-                                        "default": ["winget"]
+                                        "default": []
                                     },
                                     "combined": {
                                         "description": "Whether to combine related package managers into single counts (e.g., nix-system + nix-user = nix)",
@@ -4513,7 +4513,7 @@
                                         "type": "integer",
                                         "description": "Wait time between process samples, in milliseconds. Ignored when showTypes contains \"memory\" only",
                                         "minimum": 1,
-                                        "default": 500
+                                        "default": 250
                                     },
                                     "compact": {
                                         "type": "boolean",
