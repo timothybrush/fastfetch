@@ -1071,10 +1071,12 @@ elseif(WIN32)
         src/common/windows/registry.c
         src/common/windows/unicode.c
         src/common/windows/variant.cpp
+        src/common/windows/winrt.cpp
         src/common/windows/version.c
         src/detection/battery/battery_windows.c
         src/detection/bios/bios_windows.c
         src/detection/bluetooth/bluetooth_windows.c
+        src/detection/bluetooth/bluetooth_windows.cpp
         src/detection/bluetoothradio/bluetoothradio_windows.c
         src/detection/board/board_windows.c
         src/detection/bootmgr/bootmgr_windows.c
@@ -1343,7 +1345,7 @@ elseif(GNU)
         src/detection/keyboard/keyboard_nosupport.c
         src/detection/libc/libc_linux.c
         src/detection/lm/lm_linux.c
-        src/detection/loadavg/loadavg_linux.c
+        src/detection/loadavg/loadavg_sunos.c
         src/detection/locale/locale_linux.c
         src/detection/localip/localip_linux.c
         src/detection/gamepad/gamepad_nosupport.c
@@ -1907,6 +1909,7 @@ elseif(APPLE)
         PRIVATE "-framework Cocoa"
         PRIVATE "-framework CoreFoundation"
         PRIVATE "-framework CoreAudio"
+        PRIVATE "-framework CoreBluetooth"
         PRIVATE "-framework CoreMedia"
         PRIVATE "-framework CoreVideo"
         PRIVATE "-framework ImageIO"
