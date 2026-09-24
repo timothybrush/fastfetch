@@ -119,7 +119,7 @@ option(ENABLE_EMBEDDED_PCIIDS "Embed pci.ids into fastfetch, requires `python`" 
 option(ENABLE_EMBEDDED_AMDGPUIDS "Embed amdgpu.ids into fastfetch, requires `python`" OFF)
 option(ENABLE_WORDEXP "Enable using of wordexp(3) if available, instead of glob(3)" ON)
 option(ENABLE_LUA "Enable lua scripting for format strings" ON)
-option(ENABLE_QUICKJS "Enable quickjs scripting for format strings" ON)
+option(ENABLE_QUICKJS "Enable quickjs scripting for format strings" OFF)
 option(ENABLE_LIBZFS "Enable libzfs" ON)
 option(ENABLE_WCWIDTH "Detect wide-width characters with wcwidth when calculating logo and separator width. Disable for a smaller and slightly faster build, but logos containing CJK/emoji may be measured too narrow and render incorrectly. Such usecases are uncommon." ON)
 set(DEFAULT_STRUCTURE "Title:Separator:OS:Host:Kernel:Uptime:Packages:Shell:Display:DE:WM:WMTheme:Theme:Icons:Font:Cursor:Terminal:TerminalFont:CPU:GPU:Memory:Swap:Disk:LocalIp:Battery:PowerAdapter:Locale:Break:Colors" CACHE STRING "Default module structure for detection")
@@ -135,14 +135,29 @@ endif()
 # other leftovers, and makes `CONFIGURE_DEPENDS` react to added or removed sources.
 file(GLOB FF_MODULE_SRCS CONFIGURE_DEPENDS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src/modules" "${CMAKE_CURRENT_SOURCE_DIR}/src/modules/*/*.c")
 set(FF_MODULE_DIRS "")
+set(FF_MODULE_SRC_DIRS "")
 foreach(FF_MODULE_SRC ${FF_MODULE_SRCS})
     get_filename_component(FF_MODULE_DIR "${FF_MODULE_SRC}" DIRECTORY)
     get_filename_component(FF_MODULE_NAME "${FF_MODULE_SRC}" NAME_WE)
     if("${FF_MODULE_DIR}" STREQUAL "${FF_MODULE_NAME}")
         list(APPEND FF_MODULE_DIRS "${FF_MODULE_DIR}")
     endif()
+    list(APPEND FF_MODULE_SRC_DIRS "${FF_MODULE_DIR}")
 endforeach()
 unset(FF_MODULE_SRCS)
+
+# A directory of sources whose name no source carries registers no module at all, and nothing else
+# in the build says so -- the module simply never appears. Reported rather than left to be noticed.
+# Directories are compared rather than sources, so that a module which keeps helper sources next to
+# its own `<module>.c` does not warn about every one of them.
+list(REMOVE_DUPLICATES FF_MODULE_SRC_DIRS)
+foreach(FF_MODULE_DIR ${FF_MODULE_SRC_DIRS})
+    if(NOT FF_MODULE_DIR IN_LIST FF_MODULE_DIRS)
+        message(WARNING "src/modules/${FF_MODULE_DIR}/ contains C sources but no ${FF_MODULE_DIR}.c, "
+            "so no module is registered for it. A module directory must hold a source file named after it.")
+    endif()
+endforeach()
+unset(FF_MODULE_SRC_DIRS)
 
 foreach(FF_MODULE_DIR ${FF_MODULE_DIRS})
     string(TOUPPER "${FF_MODULE_DIR}" FF_MODULE_UPPER)
@@ -161,7 +176,11 @@ string(REGEX MATCHALL "FF_PACKAGES_FLAG_[A-Z]+_BIT" PACKAGE_MANAGERS "${PACKAGE_
 string(REGEX REPLACE "FF_PACKAGES_FLAG_([A-Z]+)_BIT" "\\1" PACKAGE_MANAGERS "${PACKAGE_MANAGERS}")
 list(SORT PACKAGE_MANAGERS)
 foreach(package_manager ${PACKAGE_MANAGERS})
-    option(PACKAGES_DISABLE_${package_manager} "Disable ${package_manager} package manager detection by default" OFF)
+    if(package_manager STREQUAL "WINGET")
+        option(PACKAGES_DISABLE_${package_manager} "Disable ${package_manager} package manager detection by default" ON)
+    else()
+        option(PACKAGES_DISABLE_${package_manager} "Disable ${package_manager} package manager detection by default" OFF)
+    endif()
 endforeach()
 option(PACKAGES_REMOVE_DISABLED "Remove disabled package managers from the build entirely, instead of just skipping them at runtime" OFF)
 
@@ -516,6 +535,11 @@ if(ENABLE_IMAGE_LOGO)
         src/logo/image/im7.c
         src/logo/image/sixel.c
     )
+    if(ANDROID)
+        list(APPEND LIBFASTFETCH_SRC
+            src/logo/image/aid.c
+        )
+    endif()
 endif()
 
 foreach(FF_MODULE_DIR ${FF_MODULE_DIRS})
@@ -694,7 +718,6 @@ elseif(ANDROID)
         src/detection/de/de_linux.c
         src/detection/wmtheme/wmtheme_linux.c
         src/detection/camera/camera_android.c
-        src/logo/image/aid.c
     )
 elseif(FreeBSD)
     list(APPEND LIBFASTFETCH_SRC
@@ -1005,7 +1028,7 @@ elseif(APPLE)
         src/detection/libc/libc_apple.c
         src/detection/locale/locale_linux.c
         src/detection/localip/localip_linux.c
-        src/detection/gamepad/gamepad_apple.c
+        src/detection/gamepad/gamepad_apple.m
         src/detection/media/media_apple.m
         src/detection/memory/memory_apple.c
         src/detection/mouse/mouse_apple.c
@@ -1905,28 +1928,37 @@ if(LINUX)
     endif()
 elseif(APPLE)
     target_link_libraries(libfastfetch
-        PRIVATE "-framework AVFoundation"
+        # reachable from the default structure
         PRIVATE "-framework Cocoa"
         PRIVATE "-framework CoreFoundation"
-        PRIVATE "-framework CoreAudio"
-        PRIVATE "-framework CoreBluetooth"
-        PRIVATE "-framework CoreMedia"
-        PRIVATE "-framework CoreVideo"
-        PRIVATE "-framework ImageIO"
-        PRIVATE "-framework Accelerate"
-        PRIVATE "-framework CoreWLAN"
-        PRIVATE "-framework IOBluetooth"
         PRIVATE "-framework IOKit"
         PRIVATE "-framework Metal"
-        PRIVATE "-framework OpenGL"
-        PRIVATE "-framework OpenCL"
-        PRIVATE "-framework SystemConfiguration"
-        PRIVATE "-framework VideoToolbox"
-        PRIVATE "-weak_framework CoreDisplay"
 
+        # referenced as ObjC classes, so they cannot be lazy loaded
+        PRIVATE "-framework AVFoundation" # Camera
+        PRIVATE "-framework CoreBluetooth" # Bluetooth
+        PRIVATE "-framework IOBluetooth" # Bluetooth, BluetoothRadio
+        PRIVATE "-framework CoreWLAN" # Wifi
+        PRIVATE "-framework GameController" # Gamepad
+
+        # only reachable from non-default modules, and referenced as plain C
+        PRIVATE "-Wl,-lazy_framework,CoreAudio" # Sound
+        PRIVATE "-Wl,-lazy_framework,CoreMedia" # Camera
+        PRIVATE "-Wl,-lazy_framework,CoreVideo" # Display, fallback for older macOS versions
+        PRIVATE "-Wl,-lazy_framework,OpenGL" # OpenGL
+        PRIVATE "-Wl,-lazy_framework,OpenCL" # OpenCL
+        PRIVATE "-Wl,-lazy_framework,SystemConfiguration" # DNS
+        PRIVATE "-Wl,-lazy_framework,VideoToolbox" # Codec
+        PRIVATE "-Wl,-lazy_framework,ImageIO" # image logos
+        PRIVATE "-Wl,-lazy_framework,Accelerate" # image logos
+
+        # private frameworks, and only reachable from non-default modules.
+        # `-weak_framework` already keeps a missing framework from aborting the
+        # launch, which lazy loading on its own would not do.
+        PRIVATE "-weak_framework CoreDisplay" # Brightness
         PRIVATE "-F /System/Library/PrivateFrameworks"
-        PRIVATE "-weak_framework DisplayServices"
-        PRIVATE "-weak_framework MediaRemote"
+        PRIVATE "-weak_framework DisplayServices" # Brightness
+        PRIVATE "-weak_framework MediaRemote" # Media
     )
 elseif(WIN32)
     target_link_libraries(libfastfetch
@@ -2031,6 +2063,14 @@ elseif(ANDROID)
     # they have to be weak references: otherwise the executable would fail to load on an older device.
     # Guarding every use with __builtin_available() is what makes that safe, and turning the guard
     # diagnostic into an error is what keeps a use from slipping past it.
+    #
+    # camera_android.c is deliberately not in this list. The camera2 NDK is a *library* that starts at
+    # API 24, and a weak reference weakens the symbol, never the library: DT_NEEDED would still name
+    # libcamera2ndk.so, and a device below API 24 would fail to load fastfetch at all. The NDK's guide
+    # is explicit that there is no such thing as a weak library reference, and that dlopen is the only
+    # way to reach a library newer than minSdkVersion. Nothing here pins ANDROID_PLATFORM, so a build
+    # aimed below 24 would need that; on the supported path -- Termux, which targets 24 -- the library
+    # is always present and the plain call is correct.
     set_source_files_properties(
         ${CMAKE_CURRENT_SOURCE_DIR}/src/logo/image/aid.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/detection/codec/codec_android.c
