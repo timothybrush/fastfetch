@@ -638,6 +638,7 @@ elseif(ANDROID)
     list(APPEND LIBFASTFETCH_SRC
         src/common/android/binder.c
         src/common/android/dex.c
+        src/common/android/package.c
         src/common/impl/dbus.c
         src/common/impl/io_unix.c
         src/common/impl/netif_linux.c
@@ -691,6 +692,7 @@ elseif(ANDROID)
         src/detection/locale/locale_linux.c
         src/detection/localip/localip_linux.c
         src/detection/gamepad/gamepad_nosupport.c
+        src/detection/media/media_android.c
         src/detection/media/media_linux.c
         src/detection/memory/memory_linux.c
         src/detection/mouse/mouse_nosupport.c
@@ -712,6 +714,7 @@ elseif(ANDROID)
         src/detection/tpm/tpm_nosupport.c
         src/detection/uptime/uptime_linux.c
         src/detection/users/users_linux.c
+        src/detection/wallpaper/wallpaper_android.c
         src/detection/wallpaper/wallpaper_linux.c
         src/detection/wifi/wifi_android.c
         src/detection/wm/wm_linux.c
@@ -2057,12 +2060,12 @@ elseif(ANDROID)
         endif()
     endif()
 
-    # Both APIs (AImageDecoder, AMediaCodec) are newer than the API level this build targets --
-    # AImageDecoder is 30, and AMediaCodec_getName / AMediaCodec_releaseName are 28 -- while fastfetch
-    # keeps running on devices below those levels. The NDK headers mark the entry points unavailable, so
-    # they have to be weak references: otherwise the executable would fail to load on an older device.
-    # Guarding every use with __builtin_available() is what makes that safe, and turning the guard
-    # diagnostic into an error is what keeps a use from slipping past it.
+    # Three APIs (AImageDecoder, AndroidBitmap_compress, AMediaCodec) are newer than the API level this
+    # build targets -- the first two are 30, and AMediaCodec_getName / AMediaCodec_releaseName are 28 --
+    # while fastfetch keeps running on devices below those levels. The NDK headers mark the entry points
+    # unavailable, so they have to be weak references: otherwise the executable would fail to load on an
+    # older device. Guarding every use with __builtin_available() is what makes that safe, and turning
+    # the guard diagnostic into an error is what keeps a use from slipping past it.
     #
     # camera_android.c is deliberately not in this list. The camera2 NDK is a *library* that starts at
     # API 24, and a weak reference weakens the symbol, never the library: DT_NEEDED would still name
@@ -2070,9 +2073,11 @@ elseif(ANDROID)
     # is explicit that there is no such thing as a weak library reference, and that dlopen is the only
     # way to reach a library newer than minSdkVersion. Nothing here pins ANDROID_PLATFORM, so a build
     # aimed below 24 would need that; on the supported path -- Termux, which targets 24 -- the library
-    # is always present and the plain call is correct.
+    # is always present and the plain call is correct. libjnigraphics itself is one of them and is
+    # linked unconditionally above, so the encoder only needs its symbol weakened, not its library.
     set_source_files_properties(
         ${CMAKE_CURRENT_SOURCE_DIR}/src/logo/image/aid.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/detection/media/media_android.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/detection/codec/codec_android.c
         PROPERTIES COMPILE_OPTIONS "-D__ANDROID_UNAVAILABLE_SYMBOLS_ARE_WEAK__;-Werror=unguarded-availability")
 elseif(Haiku)
