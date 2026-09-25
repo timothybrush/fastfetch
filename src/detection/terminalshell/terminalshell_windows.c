@@ -348,13 +348,15 @@ const FFShellResult* ffDetectShell(void) {
     if (result->processName.length > 0) {
         setShellInfoDetails(result);
         char tmp[MAX_PATH];
-        strcpy(tmp, result->exeName);
-        char* ext = strrchr(tmp, '.');
+        char* end = ffStrCopy(tmp, result->exeName, sizeof(tmp));
+        char* ext = (char*) memrchr(tmp, '.', (size_t) (end - tmp));
         if (ext) {
             *ext = '\0';
         }
         if (instance.config.general.detectVersion) {
-            fftsGetShellVersion(result->exePath.length > 0 ? &result->exePath : &result->exe, tmp, &result->version);
+            if (!fftsGetShellVersion(result->exePath.length > 0 ? &result->exePath : &result->exe, tmp, &result->version)) {
+                ffStrbufClear(&result->version);
+            }
         }
     }
 
@@ -415,7 +417,9 @@ const FFTerminalResult* ffDetectTerminal(void) {
     if (result->processName.length > 0) {
         setTerminalInfoDetails(result);
         if (instance.config.general.detectVersion) {
-            fftsGetTerminalVersion(&result->processName, result->exePath.length > 0 ? &result->exePath : &result->exe, &result->version);
+            if (!fftsGetTerminalVersion(&result->processName, result->exePath.length > 0 ? &result->exePath : &result->exe, &result->version)) {
+                ffStrbufClear(&result->version);
+            }
         }
     }
 

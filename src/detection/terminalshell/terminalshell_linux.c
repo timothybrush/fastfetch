@@ -91,7 +91,9 @@ static pid_t getTerminalInfo(FFTerminalResult* result, pid_t pid) {
             ffStrbufEqualS(&result->processName, "bash") ||
             ffStrbufEqualS(&result->processName, "zsh") ||
             ffStrbufEqualS(&result->processName, "ksh") ||
+            ffStrbufEqualS(&result->processName, "ksh93") ||
             ffStrbufEqualS(&result->processName, "mksh") ||
+            ffStrbufEqualS(&result->processName, "pdksh") ||
             ffStrbufEqualS(&result->processName, "oksh") ||
             ffStrbufEqualS(&result->processName, "csh") ||
             ffStrbufEqualS(&result->processName, "tcsh") ||
@@ -429,7 +431,9 @@ const FFShellResult* ffDetectShell() {
     if (result->processName.length > 0) {
         setShellInfoDetails(result);
         if (instance.config.general.detectVersion) {
-            fftsGetShellVersion(result->exePath.length > 0 ? &result->exePath : &result->exe, result->exeName, &result->version);
+            if (!fftsGetShellVersion(result->exePath.length > 0 ? &result->exePath : &result->exe, result->exeName, &result->version)) {
+                ffStrbufClear(&result->version);
+            }
         }
     }
 
@@ -484,7 +488,9 @@ const FFTerminalResult* ffDetectTerminal() {
     if (result->processName.length > 0) {
         setTerminalInfoDetails(result);
         if (instance.config.general.detectVersion) {
-            fftsGetTerminalVersion(&result->processName, result->exePath.length > 0 ? &result->exePath : &result->exe, &result->version);
+            if (!fftsGetTerminalVersion(&result->processName, result->exePath.length > 0 ? &result->exePath : &result->exe, &result->version)) {
+                ffStrbufClear(&result->version);
+            }
         }
     }
 
