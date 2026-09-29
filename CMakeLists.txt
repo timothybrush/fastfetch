@@ -92,7 +92,6 @@ cmake_dependent_option(ENABLE_EGL "Enable egl" ON "LINUX OR FreeBSD OR OpenBSD O
 cmake_dependent_option(ENABLE_GLX "Enable glx" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR ANDROID OR SunOS OR GNU" OFF)
 cmake_dependent_option(ENABLE_OPENCL "Enable opencl" ON "LINUX OR FreeBSD OR OpenBSD OR NetBSD OR WIN32 OR ANDROID OR SunOS OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_FREETYPE "Enable freetype" ON "ANDROID" OFF)
-cmake_dependent_option(ENABLE_PULSE "Enable pulse" ON "LINUX OR ANDROID OR GNU" OFF)
 cmake_dependent_option(ENABLE_DDCUTIL "Enable ddcutil" ON "LINUX" OFF)
 cmake_dependent_option(ENABLE_ELF "Enable libelf" ON "LINUX OR ANDROID OR DragonFly OR Haiku OR GNU" OFF)
 cmake_dependent_option(ENABLE_THREADS "Enable multithreading" ON "Threads_FOUND" OFF)
@@ -707,6 +706,7 @@ elseif(ANDROID)
         src/detection/packages/packages_nix.c
         src/detection/poweradapter/poweradapter_nosupport.c
         src/detection/processes/processes_linux.c
+        src/detection/sound/sound_android.c
         src/detection/sound/sound_linux.c
         src/detection/swap/swap_linux.c
         src/detection/terminalfont/terminalfont_android.c
@@ -1845,10 +1845,6 @@ ff_lib_enable(OPENCL
 ff_lib_enable(FREETYPE
     "freetype2"
     "FreeType2"
-)
-ff_lib_enable(PULSE
-    "libpulse"
-    "Pulse"
 )
 ff_lib_enable(DDCUTIL
     "ddcutil"
