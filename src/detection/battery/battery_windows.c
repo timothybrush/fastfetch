@@ -1,10 +1,10 @@
 #define INITGUID
 
 #include "battery.h"
-#include "common/endian.h"
-
 #include "common/debug.h"
+#include "common/endian.h"
 #include "common/mallocHelper.h"
+#include "common/windows/nt.h"
 #include "common/windows/unicode.h"
 #include "common/windows/wmi.h"
 
@@ -66,6 +66,7 @@ static const char* queryWmiAllData(const GUID* guid, [[maybe_unused]] const char
     }
 
     if (*pBufferSize == 0) {
+        FF_DEBUG("WMI: WmiQueryAllDataW(nullptr) returned no data");
         return "WmiQueryAllDataW(nullptr) returned no data";
     }
 
