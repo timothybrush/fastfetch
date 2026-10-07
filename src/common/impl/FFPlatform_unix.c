@@ -299,10 +299,7 @@ static void getHostName(FFPlatform* platform, const struct utsname* uts) {
 }
 
 static void getUserShell(FFPlatform* platform, const struct passwd* pwd) {
-    const char* shell = getenv("SHELL");
-    if (!ffStrSet(shell) && pwd) {
-        shell = pwd->pw_shell;
-    }
+    const char* shell = pwd ? pwd->pw_shell : getenv("SHELL");
 
     ffStrbufAppendS(&platform->userShell, shell);
 }
@@ -336,7 +333,12 @@ static void getCwd(FFPlatform* platform) {
 void ffPlatformInitImpl(FFPlatform* platform) {
     platform->pid = (uint32_t) getpid();
     platform->uid = getuid();
+#if !__ANDROID__
     struct passwd* pwd = getpwuid(platform->uid);
+#else
+    // On Android, /etc/passwd is empty, and getpwuid() will return `/data` for pw_dir
+    struct passwd* pwd = nullptr;
+#endif
 
     struct utsname uts;
     if (uname(&uts) < 0) {
